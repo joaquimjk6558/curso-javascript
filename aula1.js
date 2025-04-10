@@ -28,4 +28,4 @@ console.log (resultado3)
 let z1 = 2
 let z2 = 2
 resultado4 = z1 * z2 
-console.log (resultado4)
+
