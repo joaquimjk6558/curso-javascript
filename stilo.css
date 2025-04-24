@@ -1,6 +1,6 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: rgb(38, 233, 254);
+    background-color: rgb(149, 96, 96);
     display: flex;
     justify-content: center;
     padding-top: 50px;
@@ -10,7 +10,7 @@ body {
     background: rgb(11, 158, 212);
     padding: 20px;
     border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    box-shadow: 0 0 10px rgba(100, 83, 83, 0.1);
     width: 300px;
     text-align: center;
   }
@@ -33,7 +33,7 @@ body {
   }
   
   li {
-    background: #0aabeb;
+    background: #fbfbfc;
     padding: 10px;
     margin: 5px 0;
     display: flex;
@@ -43,7 +43,7 @@ body {
   
   li.concluida {
     text-decoration: line-through;
-    color: rgb(5, 171, 201);
+    color: rgb(4, 5, 5);
   }
 
 
