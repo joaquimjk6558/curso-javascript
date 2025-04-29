@@ -1,0 +1,77 @@
+let Search = (() => {
+  let debug = true;
+  let inputTarget;
+  let options = {};
+
+  function init(target, options) {
+    this.options = options;
+    inputTarget = document.querySelectorAll(target);
+    if (inputTarget.length > 0) {
+      inputTarget.forEach((item) => {
+        item.classList.add("UI-SEARCH");
+        var form = findParentBySelector(item, "form");
+        form.classList.add('UI-SEARCHAUTOCOMPLETE"');
+        item.classList.add("UI-NAV-INPUT");
+        item.setAttribute("autocomplete", "off");
+
+        form.setAttribute("data-url", options.data_url);
+        form.setAttribute("data-delay", options.data_delay);
+        form.setAttribute("data-hide-delay", options.data_hide_delay);
+        form.setAttribute("data-minchars", options.data_minchars);
+        form.classList.add("autocomplete_form");
+        form.classList.add("searchautocomplete");
+        form.parentNode.setAttribute("id", "autocomplete-container");
+        var div;
+        var append;
+        if (div = document.querySelector('.UI-PLACEHOLDER')) {
+          append = false;
+        } else {
+          append = true;
+          div = document.createElement("div");
+          div.classList.add("UI-PLACEHOLDER");
+          div.classList.add("searchautocomplete-placeholder");
+        }
+        div.setAttribute("id", "search_autocomplete");
+        div.setAttribute("style", "display:none");
+        div.addEventListener("change", function () {
+          div.style.width = getComputedStyle(item).width;
+        });
+        div.classList.add("active");
+        var autocomplete = new SearchAutocomplete();
+        if (append) {
+          form.append(div);
+        }
+        autocomplete.init(form);
+        var autocompleteForm = new SearchAutocompleteForm();
+        autocompleteForm.init(form);
+        searchHistory.init(".UI-SEARCH", ".UI-PLACEHOLDER", autocomplete);
+      });
+    }
+  }
+
+  function collectionHas(a, b) {
+    //helper function (see below)
+    for (var i = 0, len = a.length; i < len; i++) {
+      if (a[i] == b) return true;
+    }
+    return false;
+  }
+  function findParentBySelector(elm, selector) {
+    var all = document.querySelectorAll(selector);
+    var cur = elm.parentNode;
+    while (cur && !collectionHas(all, cur)) {
+      //keep going up until you find a match
+      cur = cur.parentNode; //go up
+    }
+    return cur; //will return null if not found
+  }
+
+  function insertAfter(newNode, referenceNode) {
+    referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
+  }
+
+  return {
+    init: init,
+    debug: debug,
+  };
+})();

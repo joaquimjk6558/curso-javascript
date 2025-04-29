@@ -1,0 +1,77 @@
+let searchHistory = (() => {
+  let history = "";
+  let autocomplete;
+
+  function init(searchInput, searchPlaceholder, autocomplete) {
+    searchHistory.autocomplete = autocomplete
+    var searchPlaceholderElement = document.querySelector(searchPlaceholder);
+    var searchInputElement = document.querySelector(searchInput);
+    if (!searchPlaceholderElement) {
+      console.error("[ Search History ] Element not founded ", searchPlaceholder);
+      return;
+    }
+
+    if (!searchInputElement) {
+      console.error("[ Search History ] Element not founded ", searchInput);
+      return;
+    }
+    searchInputElement.addEventListener("blur", function () {
+      if (this.value == "" || this.value == "undefined") {
+        searchPlaceholderElement.innerHTML = searchHistory.history;
+      }
+    });
+    searchInputElement.addEventListener("focusin", function () {
+      if (this.value == "" || this.value == "undefined") {
+        searchPlaceholderElement.innerHTML = searchHistory.history;
+      }
+      searchPlaceholderElement.setAttribute("style", "");
+    });
+
+    document.addEventListener("click", function () {
+      if (!event.target.closest(searchInput)) {
+        searchPlaceholderElement.setAttribute("style", "display:none;");
+      }
+      if (this.value == "" || this.value == "undefined") {
+        searchPlaceholderElement.innerHTML = searchHistory.history;
+      }
+    });
+
+    setupEvent(searchInputElement, searchPlaceholderElement);
+  }
+
+  function setupEvent(searchInputElement, searchPlaceholderElement) {
+    if (!searchInputElement.value && (searchInputElement === document.activeElement)) {
+      getMostSeach(searchPlaceholderElement);
+    }
+    searchInputElement.addEventListener("click", function () {
+      if (this.value == "" || this.value == "undefined" && searchInputElement === document.activeElement) {
+        getMostSeach(searchPlaceholderElement);
+      }
+    });
+  }
+
+  function getMostSeach(searchPlaceholderElement) {
+    if (searchHistory.history == "") {
+      var httpRequest = new XMLHttpRequest();
+      httpRequest.onreadystatechange = function () {
+        if (httpRequest.response) {
+          var response = JSON.parse(httpRequest.response);
+          searchPlaceholderElement.innerHTML = response.items;
+          searchHistory.history = response.items;
+        }
+        searchHistory.autocomplete.show()
+        // searchHistory.autocomplete.hide()
+      };
+      httpRequest.open("GET", "/search/ajax/history");
+      httpRequest.send();
+    } else {
+      searchHistory.autocomplete.show()
+      searchPlaceholderElement.innerHTML = searchHistory.history;
+    }
+  }
+
+  return {
+    init: init,
+    history: history,
+  };
+})();

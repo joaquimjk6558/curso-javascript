@@ -1,0 +1,120 @@
+/**
+ * quickview.js
+ * Author: Micael Bissoni (Bis2bis)
+ * Versão: 2.0.0
+ */
+
+let QuickView = (function() {
+    "use strict";
+
+    let DOM = {};
+
+    /* =================== private methods ================= */
+
+    function getUrlBase(url) {
+        myurl = (window.location);
+        splited_url = (myurl.toString().split("/"));
+        final_url = splited_url[0] + "//" + splited_url[2];
+        if (isLocalhost(DOM.$quickView.ownerDocument .location.hostname)) {
+            final_url = splited_url[0] + "//" + splited_url[2] + "/" + splited_url[3];
+        } else {
+            final_url = splited_url[0] + "//" + splited_url[2];
+        }
+
+        return final_url + "/" + url;
+    };
+
+
+    function isLocalhost(hostname) {
+        if (hostname == 'localhost') {
+            return true
+        } else {
+            exploded = hostname.split('.');
+            for (var k = 0; k < exploded.length; k++) {
+                if (isNaN(exploded[k])) {
+                    return false;
+                }
+            }
+        }
+        return true;
+	};
+
+    function showOptions(id) {
+        try {
+            abrir();
+
+            const newEmbed = document.createElement('embed');
+            newEmbed.src = getUrlBase('ajax/index/options/id/'+id);
+            DOM.$quickViewContainer.replaceChild(newEmbed, DOM.$embed);
+            DOM.$embed = newEmbed;
+
+            newEmbed.onload = function(evt) {
+                DOM.$quickView.classList.add('loaded');
+            };
+        } catch (error) {
+            console.log(error);
+        }
+
+        return false;
+    };
+
+    function abrir() {
+        try {
+            DOM.$quickView.classList.add('opened');
+            DOM.$quickView.ownerDocument.body.classList.add("quickview-opened");
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
+    function fechar() {
+        try {
+            DOM.$quickView.classList.remove('opened');
+            DOM.$quickView.classList.remove('loaded');
+            DOM.$quickView.ownerDocument.body.classList.remove("quickview-opened");
+            DOM.$embed.onload = null;;
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
+    // cache DOM elements
+    function bindEvents() {
+        try {
+            DOM.$quickViewOverlay.onclick = fechar;
+        } catch (error) {
+            console.log(error);
+        }
+    };
+    // cache DOM elements
+    function cacheDom() {
+        try {
+			DOM.$quickView = (document.querySelector('#quickview-app')) ? document.querySelector('#quickview-app') : parent.document.querySelector('#quickview-app');
+            DOM.$quickViewContainer = DOM.$quickView.querySelector('.quickview_container');
+            DOM.$embed = DOM.$quickView.querySelector('embed');
+			DOM.$quickViewOverlay =  DOM.$quickView.querySelector('.quickview_overlay');
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
+    // render DOM
+    /* =================== public methods ================== */
+    // main iniciar method
+    function iniciar() {
+      cacheDom();
+      bindEvents();
+    }
+
+  /* =============== export public methods =============== */
+    return {
+	  iniciar: iniciar,
+      abrir: abrir,
+      fechar: fechar,
+      showOptions: showOptions
+    };  
+}());
+
+jQuery(document).ready(function () {
+    QuickView.iniciar();
+});

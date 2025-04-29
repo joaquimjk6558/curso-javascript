@@ -1,0 +1,552 @@
+var Preco = function(_pricebox, tipo) {
+    // variáveis
+    var self = this;
+        self.tipo = tipo;
+        self.price_box = _pricebox;
+        self.parcelaBloco = jQuery(self.price_box).find('.parcelaBloco');
+        self.boletoBox = jQuery(".product-shop .boletoBox, #overlay-pagamento .boletoBox");
+        self.descontoBoleto = parseFloat(self.boletoBox.data("desconto"));
+        self.maximo_parcelas = jQuery(self.parcelaBloco).data("maximo_parcelas");
+        self.maximo_parcelas_sem_juros = jQuery(self.parcelaBloco).data("maximo_parcelas_sem_juros");
+        self.juros = jQuery(self.parcelaBloco).data("juros");
+        self.multiplos_juros = jQuery(self.parcelaBloco).data("multiplos_juros").split("|").map(Number);
+        self.tipo_juros = jQuery(self.parcelaBloco).data("juros_tipo");
+        self.valor_minimo = jQuery(self.parcelaBloco).data("valor_minimo");
+
+    self.getPrecoProduto = function() {
+        var preco;
+        //verifica se existe special price no produto
+        if (jQuery(".price-box-bundle").length > 0) {
+            if (jQuery(".price-box-bundle").find(".special-price").length > 0) {
+                preco = jQuery('.price-box-bundle .special-price .price').html();
+            }else {
+                preco = jQuery('.price-box-bundle .regular-price .price').html();
+            }
+        }else{
+            if (jQuery(self.price_box).find(".special-price").length > 0) {
+                preco = jQuery(self.price_box).find(".special-price .price").html();
+            }else if (jQuery(self.price_box).find(".price-as-configured").length > 0) {
+                //pacote de produtos
+                preco = jQuery(self.price_box).find('.price-as-configured .price').html();
+            }else {
+                preco = jQuery(self.price_box).find('.regular-price .price').html();
+            }
+        }
+        preco = preco.replace('R$', '');
+        preco = preco.replace('.', '');
+        preco = preco.replace(',', '.');
+
+        return parseFloat(preco);
+    }
+
+    //parcela arredonda 3 casa decimais para cima
+    self.arredondarParcela = function (number) {
+        number = number.toFixed(2);
+        return number.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0];
+    }
+    self.calcularParcelasMP_transparente = function(parcelas) {
+        var valorCadaParcela = 0.00;
+        valor_produto = self.getPrecoProduto();
+        var juros = self.juros/100.00;
+        if (self.tipo_juros == 0) {
+            juros = self.multiplos_juros[parcelas-(1+self.maximo_parcelas_sem_juros)]/100.00;
+
+            valorCadaParcela = (valor_produto+(valor_produto*juros*parcelas))/parcelas;
+        }else{
+            for(i=1; i<(parcelas+1); i++){
+                valor_parcela_comjuros = valor_produto*juros*Math.pow((1+juros),parcelas)/(Math.pow((1+juros),parcelas)-1);
+                valorCadaParcela = valor_parcela_comjuros;
+            }
+        }
+
+        valorCadaParcela = valorCadaParcela;
+        return valorCadaParcela;
+    }
+    self.calcularParcelasMoip = function(parcelas) {
+        var valorCadaParcela = 0.00;
+        valor_produto = self.getPrecoProduto();
+        var juros = self.juros/100.00;
+        if (self.tipo_juros == 0) {
+            var index = parcelas - 2;
+            juros = self.multiplos_juros[index]/100.00;
+
+            valorCadaParcela = (valor_produto+(valor_produto*juros))/parcelas;
+        }else{
+            for(i=1; i<(parcelas+1); i++){
+                valor_parcela_comjuros = valor_produto*juros*Math.pow((1+juros),parcelas)/(Math.pow((1+juros),parcelas)-1);
+                valorCadaParcela = valor_parcela_comjuros;
+            }
+        }
+
+        valorCadaParcela = valorCadaParcela;
+        return valorCadaParcela;
+    }
+    self.calcularParcelasPagarMe = function (parcelas) {
+        //Aplicação de juros sobre um valor -cielo v3
+        var valorCadaParcela = 0.00;
+        valor_produto = self.getPrecoProduto();
+        var juros = self.juros/100.00;
+        valorCadaParcela = (((valor_produto * juros) * parcelas) + valor_produto) / parcelas;
+        
+        return valorCadaParcela;
+    }
+    //apenas corta na segunda casa decimal
+    self.arredondarTotalMP_transparente = function (number) {
+        return number.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0];
+    }
+
+    //calcula as parcelas sem juros
+    self.calcularParcelasSemJuros = function(n_parcelas) {
+        if (!n_parcelas) {
+            if (self.calcQuantParcela() <= self.maximo_parcelas_sem_juros) {
+                n_parcelas = self.calcQuantParcela();
+            }else{
+                n_parcelas = self.maximo_parcelas_sem_juros;
+            }
+        }
+
+        parcelas = n_parcelas;
+        valor_produto = self.getPrecoProduto();
+        valorCadaParcela = valor_produto/n_parcelas;
+
+        return valorCadaParcela;
+    }
+
+    //calcula as parcelas com juros
+    self.calcularParcelas = function(parcelas) {
+        if (!parcelas) {
+            parcelas = self.calcQuantParcela();
+        }
+        var juros = self.juros;
+        var fee = juros / 100.00;
+        if (self.tipo_juros == 1) { // juros compostos
+            valorCadaParcela = (((fee + 1) ** parcelas) * valor_produto) / parcelas;
+        }
+        else { // juros simples
+            juros = self.multiplos_juros[parcelas-(1+self.maximo_parcelas_sem_juros)]/100.00;
+            valorCadaParcela = (valor_produto+(valor_produto*juros*parcelas))/parcelas;
+        }
+
+        return valorCadaParcela;
+    }
+    self.arredondarTotal = function (number) {
+        //seleciona o tipo de arredondamento do total de acordo com o tipo de pagamento
+        number = number.toFixed(2);
+        return self.arredondarTotalMP_transparente(number);
+    }
+    self.calcQuantParcela = function(){
+        valor_produto = self.getPrecoProduto();
+        var parcela_temp = valor_produto/self.valor_minimo;
+        var parcela_temp = Math.floor(parcela_temp);
+        var parcela = 1;
+        if(parcela_temp > self.maximo_parcelas){
+            parcela = self.maximo_parcelas;
+        }else{
+            parcela = parcela_temp;
+        }
+        if(parcela == 0) parcela = 1;
+
+        return parcela;
+    }
+    self.formatarMoeda = function(number) {
+        return parseFloat(number).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'});
+    };
+
+    self.simularParcelamento = function() {
+        valor_produto = self.getPrecoProduto();
+        var parcelas = self.calcQuantParcela();
+        var maximo_sem_juros = self.maximo_parcelas_sem_juros;
+        var html = "";
+        if (self.tipo != "coluna") {
+            for (ii = 1; ii <= parcelas; ii++) {
+                _class = ((ii%2) == 0) ? "even" : "odd";
+                html += "<tr class='"+_class+"'>";
+                html +=     "<td>"+ii+"x iguais*</td>";
+
+                var valorCadaParcela;
+                if (ii <= maximo_sem_juros) {
+                    valorCadaParcela = self.calcularParcelasSemJuros(ii);
+                }else{
+                    valorCadaParcela = self.calcularParcelas(ii);
+                }
+                valorTotalProduto = valorCadaParcela*ii;
+
+                html +=     "<td>"+self.formatarMoeda(self.arredondarParcela(valorCadaParcela))+"</td>";
+                if (ii <= maximo_sem_juros) {
+                    html +=     "<td>sem juros</td>";
+                } else {
+                    html +=     "<td>com juros</td>";
+                }
+                html +=     "<td>"+self.formatarMoeda(self.arredondarTotal(valorTotalProduto))+"</td>";
+                html += "</tr>";
+            }
+        }else {
+            html += "<ul class='coluna'>";
+            for (ii = 1; ii <= parcelas; ii++) {
+
+                html += "<li>";
+                html +=     "<span class='table-color'> "+ii+"x </span> de";
+
+                var valorCadaParcela;
+                if (ii <= maximo_sem_juros) {
+                    valorCadaParcela = self.calcularParcelasSemJuros(ii);
+                }else{
+                    valorCadaParcela = self.calcularParcelas(ii);
+                }
+                valorTotalProduto = valorCadaParcela*ii;
+
+                html +=     " <span class='table-color'>"+self.formatarMoeda(self.arredondarParcela(valorCadaParcela))+" </span>";
+                if (ii <= maximo_sem_juros) {
+                    html +=     "";
+                } else {
+                    html +=     "*";
+                }
+
+                html += "</li>";
+
+                // validação para duas colunas
+                if(ii % Math.round((parcelas/2)) == 0){
+                    html += '</ul>';
+                    if(ii < parcelas){
+                        html += '<ul class="coluna">';
+                    }
+                }
+            }
+            html += "</ul>";
+        }
+        jQuery(".table-pagamento").html(html);
+    }
+
+    self.simularParcelamentoSimples = function() {
+        valor_produto = self.getPrecoProduto();
+        var parcelas = self.calcQuantParcela();
+        var maximo_sem_juros = self.maximo_parcelas_sem_juros;
+        var html = "";
+
+            html += "<ul class='coluna'>";
+            for (ii = 1; ii <= parcelas; ii++) {
+
+                html += "<li>";
+                html +=     "<span class='table-color'> "+ii+"x </span> de";
+
+                var valorCadaParcela;
+                if (ii <= maximo_sem_juros) {
+                    valorCadaParcela = self.calcularParcelasSemJuros(ii);
+                }else{
+                    valorCadaParcela = self.calcularParcelas(ii);
+                }
+                valorTotalProduto = valorCadaParcela*ii;
+
+                html +=     " "+self.formatarMoeda(self.arredondarParcela(valorCadaParcela))+" ";
+                if (ii <= maximo_sem_juros) {
+                    html +=     "<td>s/ juros</td>";
+                } else {
+                    html +=     "<td>c/ juros</td>";
+                }
+
+                html += "</li>";
+
+                // validação para três colunas
+                if(ii % Math.round((parcelas/3)) == 0){
+                    html += '</ul>';
+                    if(ii < parcelas){
+                        html += '<ul class="coluna">';
+                    }
+                }
+            }
+            html += "</ul>";
+
+        jQuery(".table-simples").html(html);
+    }
+
+    self.atualizarPriceBox = function () {
+        if (self.calcQuantParcela() > self.maximo_parcelas_sem_juros) {
+
+            //atualiza parcela com juros
+            var parcelaComJurosHtml = '<div class="parcela-comjuros">';
+            parcelaComJurosHtml += 'em até <span class="parcela" data-parcela="'+self.calcQuantParcela()+'">'+self.calcQuantParcela()+'</span><span class="xparc">x</span> de ';
+            parcelaComJurosHtml += '<span class="price">'+self.formatarMoeda(self.arredondarParcela(self.calcularParcelas()))+'</span>';
+            parcelaComJurosHtml += '</div>';
+
+            var parcelasHtml = parcelaComJurosHtml;
+            jQuery(self.parcelaBloco).html(parcelasHtml);
+        }else{
+            //atualiza parcela sem juros se parcelas menor que parcela máxima sem juros
+
+            var parcelaSemJurosHtml = '<div class="parcela-semjuros">';
+            parcelaSemJurosHtml += 'em até <span class="parcela" data-parcela="'+self.calcQuantParcela()+'">'+self.calcQuantParcela()+'</span><span class="xparc">x</span> de ';
+            parcelaSemJurosHtml += '<span class="price">'+self.formatarMoeda(self.arredondarParcela(self.calcularParcelasSemJuros()))+'</span>';
+            parcelaSemJurosHtml += '</div>';
+
+            var parcelaComJurosHtml = '';
+
+            var parcelasHtml = parcelaSemJurosHtml+parcelaComJurosHtml;
+
+            jQuery(self.parcelaBloco).html(parcelasHtml);
+        }
+
+        //altera se tiver a div de boleto
+        if (self.boletoBox.length > 0 && self.descontoBoleto > 0) {
+            var desconto = self.descontoBoleto;
+            var preco = self.getPrecoProduto();
+            //atualiza valor do boleto
+            // jQuery(self.boletoBox).find(".price").html(self.formatarMoeda(self.arredondarTotal(preco*(1-desconto))));
+            jQuery(self.boletoBox).find(".descontoBoleto").html(Math.round(desconto*100));
+        }else{
+            self.boletoBox.css('display', 'none');
+        }
+
+        self.simularParcelamento(tipo);
+        self.simularParcelamentoSimples(tipo);
+    }
+}
+
+jQuery(document).ready(function(){
+    //Parcelamento e desconto de boleto do produto configurável
+    var priceBox = jQuery('.product-shop .price-box');
+    var priceBoxValid = priceBox.length;
+    if (priceBoxValid) {
+        var preco = new Preco(priceBox);
+        preco.atualizarPriceBox();
+        //Parcelamento e desconto de boleto do produto configurável
+        jQuery(".product-options select , .product-options input").change(function(event) {
+            preco.atualizarPriceBox();
+        });
+    }
+
+    var galeria = jQuery('#galeria');
+    if (galeria.length > 0 ){
+    // inicialização media de produtos horizalmente
+    var orientacao = galeria.attr('class').split('-')[1];
+
+    jQuery('.product-view .more-views, .product-view .product-image').addClass(orientacao);
+    var isVertical = false;
+    if (orientacao == "vertical") {
+        isVertical = true;
+    }
+    var title = '.media-'+orientacao;
+    var carousel = jQuery(title);
+
+    jQuery(carousel).slick({
+        vertical: isVertical,
+        verticalSwiping: isVertical,
+        infinite: false,
+        slidesToShow: 5,
+        slidesToScroll: 1,
+        swipeToSlide: true,
+        responsive: [{
+          breakpoint: 1000,
+          settings: {
+            slidesToShow: 4
+          }
+        },{
+          breakpoint: 400,
+          settings: {
+            slidesToShow: 2
+          }
+        },{
+          breakpoint: 0,
+          settings: {
+            slidesToShow: 1
+          }
+        }]
+    });
+    }
+
+    // Ao clicar em uma cor de produto configurável:
+    jQuery('#atributos-principal .cores-lista-atributos li a').on('mousedown', function(){
+        // Quantidade de imagens menos 1, pois indice do array começa do zero
+        var slideCount = jQuery('.slick-track').find('div').length-1;
+        // Enquanto quantidade de elementos da opção anterior não for menor que 0, faça:
+        while(slideCount > -1) {
+            jQuery(carousel).slick('slickRemove', slideCount);
+            slideCount--;
+        }
+        // Captura imagens da cor selecionada, já carregadas, na página
+        var novocarousel = '#cores'+jQuery(this).data('valor');
+        jQuery(novocarousel).find('.media-cores').find('div').each(function(){
+            var clone = jQuery(this).clone();
+            // Adiciona cada imagem na instância pré-existente da galeria
+            jQuery(carousel).slick('slickAdd', clone);
+        });
+        imgActive();
+    });
+
+    //Galeria de imagens
+    jQuery('.zoom-out a.ampliar-zoom').on('click', function(){
+        var aSearch = jQuery('a#zoom1').attr('href');
+        var element = jQuery('.lista-fancybox  a[data-compare="'+aSearch+'"]');
+        jQuery(element[0]).trigger('click');
+        return false;
+    });
+
+    jQuery("ul.list1 a").fancybox({
+        prevEffect      : "fade",
+        nextEffect      : "fade",
+        openEffect      : "elastic",
+        closeEffect     : "none",
+        padding         : 0,
+        closeBtn        : true,
+        helpers     : {
+            title   : { type : 'inside' },
+            buttons : {}
+        }
+
+    });
+    // END - Galeria de imagens
+
+
+   //Scroll Animate de Avaliações
+    jQuery(".ancora-avaliacoes").click(function(){
+        if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'') && location.hostname == this.hostname) {
+          var target = jQuery(this.hash);
+          target = target.length ? target : jQuery('[name=' + this.hash.slice(1) +']');
+          if (target.length) {
+            jQuery('html, body').animate({
+              scrollTop: target.offset().top
+            }, 1000);
+            return false;
+          }
+        }
+    });
+
+    //Input Increase / Decrease
+    jQuery('#qty').inputCtl({minVal: 1, maxVal: 99, step: 1});
+
+    //Inserindo class active na galeria de imagens
+    imgActive();
+});
+function imgActive(){
+    var test = jQuery('.more-views a');
+    test.on('click', function(){
+        test.removeClass('active');
+        jQuery(this).addClass('active');
+    });
+}
+
+// Script dos botões de compra da pag do produto
+//<![CDATA[
+var productAddToCartForm = new VarienForm('product_addtocart_form');
+productAddToCartForm.submit = function(button, url) {
+    if (this.validator.validate()) {
+        var form = this.form;
+        var oldUrl = form.action;
+
+        if (url) {
+            form.action = url;
+        }
+        var e = null;
+        try {
+            this.form.submit();
+
+        } catch (e) {}
+        this.form.action = oldUrl;
+        if (e) {
+            throw e;
+        }
+
+        if (button && button != 'undefined') {
+            button.disabled = true;
+        }
+    }
+}.bind(productAddToCartForm);
+
+productAddToCartForm.submitLight = function(button, url) {
+    if (this.validator) {
+        var nv = Validation.methods;
+        delete Validation.methods['required-entry'];
+        delete Validation.methods['validate-one-required'];
+        delete Validation.methods['validate-one-required-by-name'];
+        if (this.validator.validate()) {
+            if (url) {
+                this.form.action = url;
+            }
+            this.form.submit();
+        }
+        Object.extend(Validation.methods, nv);
+    }
+}.bind(productAddToCartForm);
+//]]>
+
+
+var productAddToCartFormAjax = new VarienForm('product_addtocart_form');
+productAddToCartFormAjax.submit = function(button, url) {
+    if (this.validator.validate()) {
+        var form = this.form;
+        var oldUrl = form.action;
+        if (url) {
+            form.action = url;
+        }
+        var e = null;
+        // Start of our new ajax code
+        if (!url) {
+            url = jQuery('#product_addtocart_form').attr('action');
+        }
+        url = url.replace("checkout/cart/add","ajax/index/add");
+        var data = jQuery('#product_addtocart_form').serialize();
+        data += '&isAjax=1';
+        try {
+            jQuery.ajax({
+                url: url + '/ajax/index/add/',
+                type: 'get',
+                data: data,
+                dataType: "json",
+                beforeSend: function () {
+                   setAjaxLoading();
+               },
+                success: function(data) {
+                    if(data['status'] == 'SUCCESS'){
+                       setAjaxData(data, true, 0);
+                   }else{
+                       setAjaxError(data, 0);
+                   }
+                }
+             });
+        } catch (e) {
+        }
+        // End of our new ajax code
+        this.form.action = oldUrl;
+        if (e) {
+            throw e;
+        }
+    }
+}.bind(productAddToCartFormAjax);
+productAddToCartFormAjax.submitLight = function(button, url){
+    if(this.validator) {
+        var nv = Validation.methods;
+        delete Validation.methods['required-entry'];
+        delete Validation.methods['validate-one-required'];
+        delete Validation.methods['validate-one-required-by-name'];
+        if (this.validator.validate()) {
+            if (url) {
+                this.form.action = url;
+            }
+            this.form.submit();
+        }
+        Object.extend(Validation.methods, nv);
+    }
+}.bind(productAddToCartFormAjax);
+
+jQuery('.product-view .preco-comprar .btn-cart').click(function(e){
+  campos = jQuery('.campos_atributo');
+  validar = true;
+  var alerta_texto = '';
+  campos.each(function(indice){
+    codigo = jQuery(this).attr('data-campocode');
+    if(jQuery(this).val() == ''){
+      alerta_texto += 'Por favor, selecione um(a) ' + jQuery(this).attr('data-campolabel') + '.<br/>' ;
+      validar = false;
+    }
+  });
+  if(validar){
+    productAddToCartFormAjax.submit(this);
+  } else {
+    swal({
+      title: "Ops...",
+      type:"info",
+      text: alerta_texto,
+      html: true
+    });
+  }
+  e.preventDefault();
+});

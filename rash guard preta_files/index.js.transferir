@@ -1,0 +1,197 @@
+var freteproduto = {
+
+	init: function(twofields){
+	
+		if(twofields){
+			var validnumbers = /^[0-9]*$/;
+			jQuery("#postcode").mask("99999");
+			jQuery("#postcode2").mask("999").removeClass("no-display");
+				 jQuery('#postcode').keyup(function(){
+	                    if(jQuery(this).val().length == 5 && jQuery(this).val().search(validnumbers) != -1){
+	                        jQuery('#postcode2').focus();
+	                    }
+	              });
+			
+		}else{
+			jQuery("#postcode").mask("99999-999");
+		}
+
+	},
+
+	/*Retorna Url Base*/
+	baseurl : function(param){
+		myurl= (window.location);
+        splited_url = (myurl.toString().split("/"));
+        final_url = splited_url[0] + "//" + splited_url[2];
+   		if(this.islocalhost(document.location.hostname))
+   			final_url = splited_url[0] + "//" + splited_url[2] + "/" + splited_url[3];
+   		else
+   			final_url = splited_url[0] + "//" + splited_url[2];
+	    return final_url+"/"+param;
+	},
+
+	/*Valida se é localhost*/
+	islocalhost:function(hostname){
+		if(hostname == 'localhost'){
+			return true
+		}else{
+			exploded = hostname.split('.');
+			for(var k = 0 ; k < exploded.length; k++){
+				if(isNaN(exploded[k])) // se for numero
+					return false;
+			}
+		}
+		return true;
+	},
+
+	
+	 // Ao capturar a tecla enter...
+    onEnter: function(evt){
+        var key_code = evt.keyCode  ? evt.keyCode  :
+                       evt.charCode ? evt.charCode :
+                       evt.which    ? evt.which    : void 0;
+        if (key_code == 13) {
+            return true;
+        }
+    },
+
+    // Captura tecla enter da tela de login
+    enterrateevent: function(evt){
+    	  if(evt.keyCode == 13) { // enter
+				jQuery(".btn-frete").click();
+			    return false; 
+		}
+    },
+
+    collectrates : function() {
+    	var form = new VarienForm('product_addtocart_form');
+		
+		if (form.validator.validate()) {
+
+			//verifica se é bundle e monta os parâmetros
+			var form_bundle = jQuery('form#product_addtocart_form').serializeArray();
+			var isBundle = 0;
+			bundle_objects = new Array(); 
+			form_bundle.each(function(object){
+				if(object.name.substring(0, 17) == "bundle_option_qty"){
+					isBundle = 1;
+					bundle_objects.push(object); 
+				}
+			});
+
+			if(isBundle){
+				var product_id = jQuery(".product-id").val();
+				var postcode = jQuery("#postcode").val();
+				var qty = jQuery("#qty").val();
+				if(qty === undefined){qty = 1;}
+				data_to = {product_id: product_id,qty: qty, postcode: postcode, bundle: bundle_objects}
+			}else{
+
+				var option = [];
+				var option_text = {};
+				var radios = [];
+				
+				jQuery( ".product-custom-option" ).each(function(index) {
+					if(jQuery(this).attr('type') == 'radio'){
+						var theRadioName = jQuery(this).attr('name');
+						if(radios.indexOf(theRadioName) == -1 && jQuery(this).attr('checked') == 'checked'){
+							if(jQuery(this).val() != ''){
+								option[option.length] = jQuery(this).val();
+								radios[radios.length] = theRadioName;
+							}
+						}
+					}else if(jQuery(this).attr('type') == 'checkbox'){
+						if(jQuery(this).is(':checked')){
+							option[option.length] = jQuery(this).val();
+						}
+					}else if(jQuery(this).attr('multiple') == 'multiple'){
+						jQuery(this).children().each(function(index){
+							if(this.selected){
+								option[option.length] = jQuery(this).val();
+							}
+						});
+					}else if(jQuery(this).attr('type') == 'text' || jQuery(this).is('textarea')){
+						var name = jQuery(this)[0].name;
+						var codAttr = parseInt(name.replace(/[options\[\]]/g, ''));
+						
+						option_text[codAttr] = jQuery(this)[0].value;
+					}else{
+						if(jQuery(this).val() != ''){
+							option[option.length] = jQuery(this).val();
+						}
+					} 
+				});
+				
+				//Verifica se é produto configuravel,
+				
+				//Busca o option da Cor selecionada se houver.
+				var color_option = jQuery('.selected-color').attr('data-color');
+				if(color_option != 'undefined'){
+					option[option.length] = color_option;
+				}
+
+				//Verifica se o produto com preço em promoção
+				var price;
+				if (jQuery(".product-shop .special-price .price").length > 0) {
+					price = jQuery(".product-shop .special-price .price").html();
+				}
+				else {
+					price = jQuery('.product-shop .regular-price > .price').html();
+				}
+				
+				var qty = jQuery("#qty").val();
+				if(qty === undefined){qty = 1;}
+
+				data_to = "product_id=" + jQuery(".product-id").val();
+				data_to += "&postcode="+jQuery("#postcode").val();
+				data_to += "&qty="+qty;
+				data_to += "&option="+option;
+				data_to += "&price="+price;
+				data_to += "&option_text="+JSON.stringify(option_text);
+				
+				getattr = freteproduto.getattributesvalue();
+				
+				if (getattr != ""){
+					data_to += "&" + getattr;
+				}
+			}
+				
+				jQuery("#fp-loader").css("display", "block");
+				jQuery("#shipping-rates").css("display", "none");
+				
+			ajax_request = jQuery.ajax({
+				url  : freteproduto.baseurl('freteproduto/index/index'),
+				type : "POST",
+				data : data_to
+			});
+			
+			ajax_request.done(function(response){
+				var obj = eval('(' + response + ')');
+				jQuery("#shipping-rates li").remove();
+				for(var k = 0; k < obj.length; k++){
+					ul = jQuery("#shipping-rates");
+					li = jQuery("<li></li>");
+					li.html(obj[k]);
+					ul.append(li);
+					jQuery("#fp-loader").css("display", "none");
+					jQuery("#shipping-rates").css("display", "block");
+				}
+			});
+		}else{
+			swal("Ops...", 'Campos Obrigatórios não preenchidos!', "error");
+		}
+	},
+
+	getattributesvalue : function() {
+		var attrsshipping = jQuery(".attrshipping");
+		var v_string = '';
+		for (var k = 0; k < attrsshipping.length; k++) {
+			if (attrsshipping.length == (k + 1))
+				v_string += "attr" + attrsshipping.eq(k).html() + "=" + jQuery("#attribute" + attrsshipping.eq(k).html()).val();
+			else
+				v_string += "attr" + attrsshipping.eq(k).html() + "=" + jQuery("#attribute" + attrsshipping.eq(k).html()).val() + "&";
+		}
+		return v_string;
+	}
+};
+

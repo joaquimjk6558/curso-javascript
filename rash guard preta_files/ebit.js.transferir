@@ -1,0 +1,72 @@
+jQuery(document).ready(function() {
+	bannerebit.getEbitSelo();
+});
+
+
+var bannerebit = {
+
+	// retorna a url base
+	baseurl : function(param){
+		myurl= (window.location);
+        splited_url = (myurl.toString().split("/"));
+        final_url = splited_url[0] + "//" + splited_url[2];
+   		if(this.islocalhost(document.location.hostname))
+   			final_url = splited_url[0] + "//" + splited_url[2] + "/" + splited_url[3];
+   		else
+   			final_url = splited_url[0] + "//" + splited_url[2];
+	    return final_url+"/"+param;
+	},
+
+	islocalhost:function(hostname){
+		if(hostname == 'localhost'){
+			return true;
+		}else{
+			exploded = hostname.split('.');
+			for(var k = 0 ; k < exploded.length; k++){
+				if(isNaN(exploded[k])) // se for numero
+					return false;
+			}
+		}
+		return true;
+	},
+
+	getEbitSelo: function() {
+		request = jQuery.ajax({
+			url  : bannerebit.baseurl('bannerebit/selo/script'),
+			type : "GET",
+			data : { page : window.location.href  }
+		});
+
+		request.done(function(res) {
+			res = JSON.parse(res);
+
+			if(!res.error) {
+				var elementHtml = jQuery("#" + res.id_html);
+				
+				//adiciona o selo somente se o elemento existir na página
+				if(elementHtml.length > 0) {
+					if(res.selo_href) {
+						var seloEbit  = document.createElement('a');
+						seloEbit.href = res.selo_href;
+						seloEbit.id   = "seloEbit";
+						seloEbit.target = "_blank";
+						seloEbit.onclick = "redir(this.href);";
+						elementHtml.append(seloEbit);
+					}	
+					
+					if(res.script) {
+						var s = document.createElement("script");
+						s.type = "text/javascript";
+						s.src = res.script;
+						s.id  = "getSelo"; 
+
+						// a variavel foi deixada pois se não adicionar na variavel, o script não funciona, melhoras são aceitas ;)
+						var add = document.body.appendChild(s);
+					}
+				} else {
+					console.log("Noticia: Elemento para adicionar E-bit Selo não foi encontrado");
+				}
+			}
+		});
+	}
+}

@@ -1,0 +1,73 @@
+// travar fancybox na rolagem atual
+jQuery(".fancybox").fancybox({
+    helpers: {
+      overlay: {
+        locked: false
+      }
+    }
+});
+
+//Fancybox do módulo CEP
+jQuery(".fancybox-iframe").fancybox({
+    maxWidth: 1000,
+    maxHeight: 650,
+    fitToView: false,
+    width: '80%',
+    height: '80%',
+    autoSize: false,
+    closeClick: false,
+    openEffect: 'fade',
+    closeEffect: 'none',
+    helpers: {
+      overlay: {
+        locked: false
+      }
+    }
+});
+
+jQuery(".fancybox-pagamento").fancybox({
+    maxWidth: 500,
+    fitToView: true,
+    autoSize: true,
+    closeClick: false,
+    openEffect: 'fade',
+    closeEffect: 'fade',
+     helpers:  {
+        title:  null,
+        overlay: {
+            locked: false
+        }
+    }
+
+});
+
+//FANCYBOX VÍDEO
+jQuery('.fancybox-media').fancybox({
+  openEffect  : 'elastic',
+  padding: 0,
+  title: null,
+  
+    fitToView   : true,
+
+  closeEffect : 'none',
+  helpers : {
+    media : {}
+    }
+});
+
+jQuery(".fancybox-inline").fancybox({
+    maxWidth    : 1024,
+    maxHeight   : 768,
+    fitToView   : false,
+    width       : '70%',
+    height      : '70%',
+    autoSize    : false,
+    closeClick  : false,
+    openEffect  : 'none',
+    closeEffect : 'none',
+    helpers: {
+      overlay: {
+        locked: false
+      }
+    }
+});

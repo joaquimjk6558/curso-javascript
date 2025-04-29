@@ -1,0 +1,64 @@
+document.observe("dom:loaded", function () {
+  $$("button.mstcore-help-button").each(function (button) {
+    new Tooltip(button, { mouseFollow: true, hideDuration: 0, appearDuration: 0, delay: 0 });
+  });
+
+  $$("div.mst-config .hint").each(function (hint) {
+    var text = hint.parentElement.parentElement.select("p.note span")[0].innerHTML;
+    hint.writeAttribute("title", text);
+
+    new Tooltip(hint, { mouseFollow: true, hideDuration: 0, appearDuration: 0, delay: 0 });
+  });
+});
+function importSynonymsFile(e) {    
+  var div = document.createElement('div');
+  var form = document.createElement('form');
+  var inputTypeFile = document.createElement('input');
+  var button = document.createElement('input');
+  button.type = 'submit';
+  button.classList.add('save');
+  button.value = 'Importar';
+  button.style = 'margin: 5px 5px;';
+  
+  inputTypeFile.type = 'file';
+  inputTypeFile.name = 'synonymsFile'
+
+  form.method = 'POST';
+  form.enctype = 'multipart/form-data';
+  form.style = 'margin: 5px 5px;';
+  
+  form.action = window.location.origin + '/index.php/admin/search_synonym/importSynonyms?form_key=' + window.FORM_KEY + '&isAjax=true';
+
+  form.appendChild(inputTypeFile);
+  form.appendChild(button);
+  div.appendChild(form);
+  //...adiciona os elemento do form...
+  e.target.parentElement.style = "display:none";
+  e.target.parentElement.parentElement.appendChild(form);
+}
+function importStopWordFile(e) {    
+  var div = document.createElement('div');
+  var form = document.createElement('form');
+  var inputTypeFile = document.createElement('input');
+  var button = document.createElement('input');
+  button.type = 'submit';
+  button.classList.add('save');
+  button.value = 'Importar';
+  button.style = 'margin: 5px 5px;';
+  
+  inputTypeFile.type = 'file';
+  inputTypeFile.name = 'stopwordFile'
+
+  form.method = 'POST';
+  form.enctype = 'multipart/form-data';
+  form.style = 'margin: 5px 5px;';
+  
+  form.action = window.location.origin + '/index.php/admin/search_stopword/importStopWord?form_key=' + window.FORM_KEY + '&isAjax=true';
+
+  form.appendChild(inputTypeFile);
+  form.appendChild(button);
+  div.appendChild(form);
+  //...adiciona os elemento do form...
+  e.target.parentElement.style = "display:none";
+  e.target.parentElement.parentElement.appendChild(form);
+}

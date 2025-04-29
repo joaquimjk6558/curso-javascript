@@ -1,0 +1,207 @@
+// Função que resgata a URL Base, tanto para lojas no servidor ou local
+function baseurl(param){
+	myurl= (window.location);
+	splited_url = (myurl.toString().split("/"));
+	final_url = splited_url[0] + "//" + splited_url[2];
+	if(islocalhost(document.location.hostname))
+		final_url = splited_url[0] + "//" + splited_url[2] + "/" + splited_url[3];
+	else
+		final_url = splited_url[0] + "//" + splited_url[2];
+	return final_url+"/"+param;
+};
+
+// Função que verificar se é localhost, usada na função "baseurl"
+function islocalhost(hostname){
+	if(hostname == 'localhost'){
+		return true
+	}else{
+		exploded = hostname.split('.');
+		for(var k = 0 ; k < exploded.length; k++){
+			if(isNaN(exploded[k])) // se for numero
+				return false;
+		}
+	}
+	return true;
+};
+
+jQuery(document).ready(function(){
+	
+	jQuery('.btnadd').click(function(e){
+		len = jQuery(this).closest('.opcoes').find('.selectAttr').length;
+		form = jQuery(this).closest('.formcomprejunto');
+		submit = true;
+		
+		if(len > 0){		
+			jQuery(this).closest('.opcoes').find('.selectAttr').each(function(index, element){
+				valor = jQuery(this).find('option:checked').val();
+				if(valor == ''){
+					jQuery(this).css('border','1px dashed red');
+                    jQuery('.attribute-error-msg').addClass('show').text('Selecione uma opção para prosseguir.');
+					submit = false;
+				} else if(valor == undefined){
+					jQuery(this).closest('.product').find('.selectAttr').val('').css('border','1px dashed red');
+                    jQuery('.attribute-error-msg').addClass('show').text('Selecione uma opção para prosseguir.');
+					submit = false;
+				}else{
+					jQuery(this).css('border','none');
+                    jQuery('.attribute-error-msg.show').removeClass('show').text('');
+				}
+			   
+				if (index == len - 1) {
+					if(submit){
+						jQuery(form).submit();
+					}
+				}
+			}); 
+		} else {
+			jQuery(form).submit();
+		}
+	});
+	
+
+	jQuery('.selectAttr[class*="attr_"]').change(function(){
+		produto = jQuery(this).closest('.product');
+		product_id = jQuery(this).closest('.product').attr('id');
+		jQuery(produto).find('.loadingattr').show();
+		jQuery(produto).css('opacity','0.30');
+		select_atual = jQuery(this);
+		
+		jQuery(this).find("option:selected").each(function () {
+			id_compra = jQuery(this).attr('compra');
+		});
+		/*
+		*pega a key do proximo select
+		*/
+		key = (parseInt(jQuery(this).attr('key')) + 1).toString();
+		next_attribute = jQuery('.product_'+ product_id +  '.select_' + key + ' .selectAttr.attr_' + key).attr('id');
+
+		/*
+		*array com todas as combinações do produto
+		*/ 
+		options=[];
+		jQuery('.optionsSelects.product_'+ product_id +'.compra_'+ id_compra +' option:selected:not([value=""])').each(function(){
+			if(parseInt(jQuery(this).closest('.selectAttr[class*="attr_"]').attr('key')) < parseInt(key)){
+				options.push({
+					'attr_code': jQuery(this).attr('id') ,
+					'attr_id':  jQuery(this).val()
+				});
+			}
+		});
+		
+		jQuery.ajax({
+			type: "POST",
+			url: baseurl("comprejunto/standard/getnextfirst"),
+			data: {
+				'attr_compra': id_compra,
+				'options': options,
+				'next_attribute': next_attribute,
+				'product_id': product_id
+			}
+		}).done(function(response) {
+			/*
+			*limpa o select
+			*/
+			jQuery(produto).find('.selectAttr[class*="attr_"]').each(function(){
+				if(parseInt(jQuery(this).attr('key')) >= parseInt(key)){
+					jQuery(this).html('');
+					jQuery(this).append(new Option('Selecione...', '', true, true));
+					jQuery(this).closest('.select_' + jQuery(this).attr('key')).css('display','none');
+				}
+			});
+
+			var obj = response;
+			if(obj.length > 0){
+				for(var k = 0; k < obj.length; k++){
+					opc = obj[k].option_next;
+					prod_pai = obj[k].prod_pai_id;
+					nome_produto = obj[k].nome_produto;
+					filho_id = obj[k].filho_id;
+					preco_desconto = obj[k].preco_desconto;
+					preco_total_filho = obj[k].preco_total_filho;
+					imagem = obj[k].imagem;
+					admin_desconto = parseFloat(obj[k].admin_desconto);
+					admin_descontos_formated = (100 - admin_desconto)/100;
+					comprejunto_desconto = parseFloat(obj[k].comprejunto_desconto);
+					comprejunto_tipodesconto = obj[k].comprejunto_tipodesconto;
+					
+					/*
+					Realiza a alteracao do nomo do produto - configuravel para simples
+					if(nome_produto){
+						select_atual.closest(".product").find(".product-name a").html(nome_produto);
+					}*/
+					if(preco_total_filho){
+						select_atual.closest(".product").find("div.boxPrecoUnit p.precoindividual.config").html("R$ " + preco_total_filho.replace('.', ','));
+					}
+					if(preco_desconto){
+						select_atual.closest(".product").find("div.boxPrecoUnit p.precoindividual2.config").html("R$ " +preco_desconto.replace('.', ','));
+					}
+					if(imagem){
+						imagem = imagem.replace("\/","/"); 
+						jQuery(produto).find('a#'+prod_pai+' img').attr('src', imagem);
+					}
+					if (select_atual.closest('.formcomprejunto').find('.antigo span').hasClass(prod_pai)){
+						select_atual.closest('.formcomprejunto').find('.antigo span.' + prod_pai + ' span.price').html("R$ " + preco_desconto.replace('.', ','));
+					}
+
+					noDiscountsTotal = 0;
+					select_atual.closest('.formcomprejunto').find('.precoindividual').each(function () {
+						var fullPrice = jQuery(this).html().replace(/[^\d,]/g, '').replace(',', '.');
+						noDiscountsTotal += parseFloat(fullPrice);
+					});
+					
+					soma = 0;
+					select_atual.closest('.formcomprejunto').find('.antigo span.compra_prod span.price').each(function () {
+						var num = jQuery(this).html().replace(/[^\d,]/g, '').replace(',', '.');
+						soma += parseFloat(num);
+					});
+
+					soma_string = soma.toFixed(2).replace('.',',');
+					select_atual.closest(".formcomprejunto").find(".antigo span.totalgeral span.preco b").html("R$ " + soma_string);
+
+					/*
+					*
+					*calcula parcelas compre junto - uso opcional por loja
+					*/
+					var num_parcelas = select_atual.closest(".formcomprejunto").find(".parcelaBloco span.parcela").attr('data-parcela');
+					var parcela = soma/num_parcelas;
+					select_atual.closest(".formcomprejunto").find(".parcelaBloco span.preco").html("R$ " + parcela.toFixed(2).replace('.',','));
+
+					preco_combinado_string = soma.toFixed(2).replace('.',',');
+					select_atual.closest(".formcomprejunto").find(".novo b").first().html(" R$ " + preco_combinado_string);
+					/*
+					*
+					* valor de desconto que algumas lojas podem atribuir as compras a vista - uso opcional por loja - valor editavel
+					*/
+
+					if (admin_desconto > 0) {
+						if (obj[k].comprejunto_tipodesconto == 'porcent') {
+							total_descontos = (100 - (admin_desconto + comprejunto_desconto)) / 100;
+							comDesc = (noDiscountsTotal * total_descontos);
+						} else {
+							comDesc = (noDiscountsTotal * admin_descontos_formated) - comprejunto_desconto;
+						}
+						desconto_string = comDesc.toFixed(2).replace('.',',');
+						select_atual.closest(".formcomprejunto").find(".novo b").last().html(" R$ " + desconto_string);
+					}
+
+
+					for (var i in opc) {
+						jQuery(produto).find('.select_' + key + ' .selectAttr.attr_' + key).append(newOptionSelect(next_attribute,id_compra,i,opc[i]));
+					}
+					jQuery(produto).find('.select_' + key + ' .selectAttr.attr_' + key).val('');
+					//jQuery(produto).find('.select_' + key).css('display','block');
+					jQuery(produto).find('.select_' + key).fadeIn('slow');
+
+				}
+			} else {
+				jQuery(produto).find('.select_' + key + ' .selectAttr.attr_' + key).append(new Option('Selecione...', '', true, true));
+			}
+			jQuery(produto).find('.loadingattr').hide();
+			jQuery(produto).css('opacity','1');
+		});	
+	});
+
+	function newOptionSelect(attr_code, id_compra, value_index, label){
+		return '<option id="'+ attr_code +'" compra="'+ id_compra +'"  value="' + value_index +'">'+ label +'</option>';
+	};
+});

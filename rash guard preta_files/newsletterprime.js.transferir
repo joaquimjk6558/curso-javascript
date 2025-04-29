@@ -1,0 +1,116 @@
+function validateNewPrimeOnSubmit(form) {
+    let self = this;
+    self.form = form;
+
+    self.validateInput = function(elem) {
+        if(!elem.input) {
+            return;
+        };
+
+        let isValid = false;
+        switch (elem.type) {
+            case 'text':
+            isValid = (elem.input.getAttribute('required')) ? self.validateText(elem.input) : true;
+            break;
+
+            case 'email':
+            isValid = (elem.input.getAttribute('required')) ? self.validateEmail(elem.input) : true;
+            break;
+
+            case 'radio':
+            isValid = (elem.input[0].getAttribute('required')) ? self.validateRadio(elem.input) : true;
+            break;
+
+            default:
+            break;
+        }
+
+        return isValid == false;
+    };
+
+    self.validateText = function (input) {
+        if ((input.value.match(input.getAttribute('pattern')))) {
+            self.form.querySelector('.notification').innerHTML = 'Validação Ok!';
+            input.parentNode.classList.remove('news-prime-error');
+        } else {
+            input.parentNode.classList.add('news-prime-error');
+            self.form.querySelector('.notification').innerHTML = 'Favor preencher apenas o primeiro nome contendo apenas letras.';
+
+            return false;
+        }
+
+        return true;
+    };
+
+    self.validateEmail = function (input) {
+        var pattern = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+        if(input.value.match(pattern)){
+            self.form.querySelector('.notification').innerHTML = 'Validação Ok!';
+            input.parentNode.classList.remove('news-prime-error');
+        } else {
+            input.parentNode.classList.add('news-prime-error');
+            self.form.querySelector('.notification').innerHTML = 'Favor preencher o seu email corretamente.';
+
+            return false;
+        }
+
+        return true;
+    };
+
+    self.validateRadio = function (input) {
+        if (input[0].checked || input[1].checked) {
+            self.form.querySelector('.notification').innerHTML = 'Validação Ok!';
+            for (let index = 0; index < input.length; index++) {
+                const element = input[index];
+                element.parentNode.classList.remove('news-prime-error');
+            }
+        } else {
+            for (let index = 0; index < input.length; index++) {
+                const element = input[index];
+                element.parentNode.classList.add('news-prime-error');
+            }
+            self.form.querySelector('.notification').innerHTML = 'Favor selecionar uma opção.';
+            input[0].focus();
+
+            return false;
+        }
+
+        return true;
+    };
+
+    self.convertToArray = function (nodes) {
+        var array = null;
+        try {
+            array = Array.prototype.slice.call(nodes, 0);
+            //non-IE and IE9+
+        } catch (ex) {
+            array = new Array();
+            for (var i = 0, len = nodes.length; i < len; i++) {
+                array.push(nodes[i]);
+            }
+        }
+        return array;
+    };
+
+    self.validate = function () {
+        try {
+            const inputName = self.form.querySelector('input[name="name"]');
+            const inputEmail = self.form.querySelector('input[name="email"]');
+            const inputGender = (self.form.querySelector('input[name="gender"]')) ? self.convertToArray(self.form.querySelectorAll('input[name="gender"]')) : null;
+            const inputsForm = [
+                {name: 'name', type: 'text', input: inputName},
+                {name: 'gender', type: 'radio', input: inputGender},
+                {name: 'email', type: 'email', input: inputEmail}
+            ];
+
+            return !inputsForm.some(self.validateInput);
+
+        } catch (error) {
+            console.log(error);
+        }
+
+        return false;
+    };
+
+    return self.validate();
+};

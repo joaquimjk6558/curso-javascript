@@ -1,0 +1,145 @@
+jQuery.noConflict();
+jQuery(document).ready(function() {
+
+	// novo carrossel SLICK
+
+	// Em cada página que tinha um owl, inclua:
+
+	// Classe: colocar antes do foreach. Este irá englobar os itens
+	// Div: iniciar na linha seguinte ao foreach e fechar no final do foreach.
+
+	// Para incluir ou em caso de dúvidas sobre os atributos, visite
+	// http://kenwheeler.github.io/slick/
+	// e procure por "Settings"
+
+	// carousels que utilizem dots e botões (banner-top, depoimentos)
+	var carouselnav = jQuery('.carousel-nav');
+	carouselnav.slick({
+		infinite: true,
+		slidesToShow: 1,
+		slidesToScroll: 1,
+		swipeToSlide: true,
+		dots: true,
+		autoplay: true,
+		autoplaySpeed: 10000
+	});
+
+	// carousels que não utilizem dots e botões (banner-categorias, banner-footer)
+	var carouselnonav = jQuery('.carousel-nonav');
+	carouselnonav.slick({
+		infinite: true,
+		slidesToShow: 1,
+		slidesToScroll: 1,
+		swipeToSlide: true,
+		dots: false,
+		arrows: false,
+		autoplay: true,
+		autoplaySpeed: 10000
+	});
+
+	//Máscara do Input de Cep.
+	jQuery(".cart .shipping #postcode").mask("99999-999");
+	//Máscara do Input de telefone.
+	jQuery("#contactForm #telephone").mask("(99)99999-9999");
+	var $width = jQuery(window).width();
+    if($width <= 769){
+        jQuery('.blockFooter').each(function() {
+            var $openbutton = jQuery(this).find('h4');
+            jQuery($openbutton).click(function(){
+                jQuery(this).toggleClass('open');
+                jQuery(this).parent().find('.rodapeNav li').toggle('slow');
+            });
+        });
+    }
+    applySlickOnCarouselListProducts();
+});
+
+function countErrorsCart() {
+  var count = 0;
+  jQuery('tr').each(function() {
+	var errors = jQuery(this).find('.item-msg.error');
+	if (errors.length > 0) {
+	  count += 1;
+	}
+  });
+  return count;
+}
+
+//Plugin de alert no mailto
+! function(t) {
+	t.fn.confirmMailto = function(e) {
+		var n = t.extend({
+				message: "Gostaria de enviar um e-mail à $to?",
+				to: "href",
+				callback: function() {},
+				success: function() {},
+				fail: function() {}
+			}, e),
+			a = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi,
+			i = function(e) {
+				var i = n.message,
+					c = n.to;
+				if (c = "href" == c ? t(this).attr("href").match(a) : "html" == c ? t(this).html() : c, i = i.replace("$to", c) == i ? i + c : i.replace("$to", c), confirm(i)) {
+					n.success();
+					var o = !0
+				} else {
+					e.preventDefault(), n.fail();
+					var o = !1
+				}
+				return setTimeout(function() {
+					n.callback(o)
+				}, 1), o
+			};
+		return this.filter('[href^="mailto:"]').each(function() {
+			t(this).bind("click", i)
+		}), this
+	}
+}(jQuery);
+
+//Alert de confirmação de envio de e-mail
+jQuery('.confirma-email').confirmMailto();
+
+// FACEBOOK LIKEBOX - LIKEBUTTON
+(function(d, s, id) {
+	var js, fjs = d.getElementsByTagName(s)[0];
+	if (d.getElementById(id)) return;
+	js = d.createElement(s);
+	js.id = id;
+	js.src = "//connect.facebook.net/pt_BR/sdk.js#xfbml=1&appId=678010208943929&version=v2.0";
+	fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));
+
+// inicialização de listas que usam carousel (upsell, relacionados e carossel.)
+var applySlickOnCarouselListProducts = function() {
+	var list_products = jQuery('.carousel-list-products');
+	if(list_products && list_products.length) {
+		list_products.each( function( index ) {
+			if(this && !jQuery(this).hasClass('slick-initialized'))
+			{
+				jQuery(this).slick({
+					infinite: true,
+					slidesToShow: 4,
+					slidesToScroll: 1,
+					swipeToSlide: true,
+					dots: false,
+					responsive: [{
+					  breakpoint: 800,
+					  settings: {
+						slidesToShow: 3
+					  }
+					},{
+					  breakpoint: 400,
+					  settings: {
+						slidesToShow: 2
+					  }
+					},{
+					  breakpoint: 0,
+					  settings: {
+						slidesToShow: 1
+					  }
+					}]
+				});
+			}
+		});
+	}
+}
